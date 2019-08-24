@@ -16,58 +16,90 @@ namespace DLLEmbedding
         {
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
             {
-                string dllName = new AssemblyName(args.Name).Name + ".dll";
-                var assembly = Assembly.GetExecutingAssembly();
-
-                string resourceName = assembly.GetManifestResourceNames().FirstOrDefault(rn => rn.EndsWith(dllName));
-                if (resourceName == null)
-                {
-                    return null; // Not found, maybe another handler will find it
-                }
-
-                System.IO.Stream stream = null;
-                Assembly loadedAssembly = null;
-                try
-                {
-                    stream = assembly.GetManifestResourceStream(resourceName);
-                    byte[] assemblyData = new byte[stream.Length];
-                    stream.Read(assemblyData, 0, assemblyData.Length);
-                    loadedAssembly = Assembly.Load(assemblyData);
-                }
-                catch (Exception Ex)
-                {
-                    loadedAssembly = null;
-
-                    //Choose one of the two blocks below:
-
-                    // WPF
-                    MessageBox.Show("Error loading embedded assembly resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex));
-                    Application.Current.Shutdown();
-
-                    // Console
-                    Console.WriteLine("Error loading embedded assembly resource. Console Application will now close." + Environment.NewLine + Convert.ToString(Ex));
-                    Environment.Exit(0);
-                }
-                finally
-                {
-                    if (stream != null)
-                    {
-                        stream.Dispose();
-                    }
-                }
-
-                return loadedAssembly;
+                return resolve(sender, args);
             };
         }
 
+        private static Assembly resolve(object sender, ResolveEventArgs args)
+        {
+            string dllName = new AssemblyName(args.Name).Name + ".dll";
+            var assembly = Assembly.GetExecutingAssembly();
+
+            string resourceName = assembly.GetManifestResourceNames().FirstOrDefault(rn => rn.EndsWith(dllName));
+            if (resourceName == null)
+            {
+                return null; // Not found, maybe another handler will find it
+            }
+
+            System.IO.Stream stream = null;
+            Assembly loadedAssembly = null;
+            try
+            {
+                stream = assembly.GetManifestResourceStream(resourceName);
+                byte[] assemblyData = new byte[stream.Length];
+                stream.Read(assemblyData, 0, assemblyData.Length);
+                loadedAssembly = Assembly.Load(assemblyData);
+            }
+            catch (Exception Ex)
+            {
+                loadedAssembly = null;
+
+                MessageBox.Show("Error loading embedded assembly resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex));
+                Shutdown("DLL", Ex);
+            }
+            finally
+            {
+                if (stream != null)
+                {
+                    stream.Dispose();
+                }
+            }
+
+            return loadedAssembly;
+        }
+
         // This is for WPF applications only that reference XAML files built into an assembly.
-        public static void LoadResourceDictionary(App app, string assembly, string path)
+        public static void LoadResourceDictionary(string assembly, string path)
         {
             // Uri path of assembly resource.
             string uri = @"pack://application:,,,/" + assembly + ";component/" + path;
 
             // Add Uri to App ResourceDictionary.
-            app.Resources.MergedDictionaries.Add(new ResourceDictionary() { Source = new Uri(uri) });
+            try
+            {
+                Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary() { Source = new Uri(uri) });
+            }
+            catch (Exception Ex)
+            {
+                MessageBox.Show("Error loading embedded XAML resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex));
+                Shutdown("XAML", Ex);
+            }
+        }
+
+        public static void Shutdown(string resource, Exception Ex)
+        {
+            string message = "Error loading embedded " + resource + " resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex);
+
+            //Choose one of the two blocks below:
+
+            // WPF
+            // -----------
+            MessageBox.Show(message);
+            if (Application.Current != null)
+            {
+                Application.Current.Shutdown();
+            }
+            else
+            {
+                Environment.Exit(0);
+            }
+            // -----------
+
+            // Console
+            // -----------
+            Console.WriteLine(message);
+            Environment.Exit(0);
+            // -----------
         }
     }
     // END DLLEmbeddingHandler_Class ----------------------------------------------------------------------------------------------------

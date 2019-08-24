@@ -12,5 +12,10 @@ namespace DLLEmbedding
     /// </summary>
     public partial class App : Application
     {
+        public void AppStartup(object sender, StartupEventArgs e)
+        {
+            MainWindow mainWindow = new MainWindow();
+            mainWindow.Show();
+        }
     }
 }
