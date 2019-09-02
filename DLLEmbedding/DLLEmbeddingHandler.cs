@@ -23,7 +23,7 @@ namespace DLLEmbedding
         private static Assembly resolve(object sender, ResolveEventArgs args)
         {
             string dllName = new AssemblyName(args.Name).Name + ".dll";
-            var assembly = Assembly.GetExecutingAssembly();
+            Assembly assembly = Assembly.GetExecutingAssembly();
 
             string resourceName = assembly.GetManifestResourceNames().FirstOrDefault(rn => rn.EndsWith(dllName));
             if (resourceName == null)
@@ -45,7 +45,7 @@ namespace DLLEmbedding
                 loadedAssembly = null;
 
                 MessageBox.Show("Error loading embedded assembly resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex));
-                Shutdown("DLL", Ex);
+                showError("DLL", Ex);
             }
             finally
             {
@@ -72,11 +72,11 @@ namespace DLLEmbedding
             catch (Exception Ex)
             {
                 MessageBox.Show("Error loading embedded XAML resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex));
-                Shutdown("XAML", Ex);
+                showError("XAML", Ex);
             }
         }
 
-        public static void Shutdown(string resource, Exception Ex)
+        private static void showError(string resource, Exception Ex)
         {
             string message = "Error loading embedded " + resource + " resource. Application will now close." + Environment.NewLine + Convert.ToString(Ex);
 
@@ -85,6 +85,22 @@ namespace DLLEmbedding
             // WPF
             // -----------
             MessageBox.Show(message);
+            // -----------
+
+            // Console
+            // -----------
+            Console.WriteLine(message);
+            // -----------
+
+            Shutdown();
+        }
+
+        public static void Shutdown()
+        {
+            //Choose one of the two blocks below:
+
+            // WPF
+            // -----------
             if (Application.Current != null)
             {
                 Application.Current.Shutdown();
@@ -97,7 +113,6 @@ namespace DLLEmbedding
 
             // Console
             // -----------
-            Console.WriteLine(message);
             Environment.Exit(0);
             // -----------
         }
